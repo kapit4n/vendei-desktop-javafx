@@ -1,0 +1,22 @@
+-- Point image_url at bundled assets copied from ng-vendei-full (classpath:/assets/vendei/demo-products/...)
+
+UPDATE products SET image_url = '/assets/vendei/demo-products/apple.jpg' WHERE code = 'APL-RED-001';
+UPDATE products SET image_url = '/assets/vendei/demo-products/bananas.jpg' WHERE code = 'BAN-001';
+UPDATE products SET image_url = '/assets/vendei/demo-products/bread.jpg' WHERE code = 'BRD-BAG-001';
+UPDATE products SET image_url = '/assets/vendei/demo-products/milk.jpg' WHERE code = 'MLK-001';
+UPDATE products SET image_url = '/assets/vendei/demo-products/eggs.jpg' WHERE code = 'EGG-012';
+UPDATE products SET image_url = '/assets/vendei/demo-products/pasta.jpg' WHERE code = 'PST-500';
+UPDATE products SET image_url = '/assets/vendei/demo-products/rice.jpg' WHERE code = 'RCE-1K';
+UPDATE products SET image_url = '/assets/vendei/demo-products/coffee.jpg' WHERE code = 'COF-250';
+UPDATE products SET image_url = '/assets/vendei/demo-products/tea.jpg' WHERE code = 'TEA-BLK-020';
+UPDATE products SET image_url = '/assets/vendei/demo-products/olive-oil.jpg' WHERE code = 'OIL-OLV-500';
+UPDATE products SET image_url = '/assets/vendei/demo-products/cheese.jpg' WHERE code = 'CHS-CHED-200';
+UPDATE products SET image_url = '/assets/vendei/demo-products/chicken.jpg' WHERE code = 'CHK-BRST-1LB';
+UPDATE products SET image_url = '/assets/vendei/demo-products/detergent.jpg' WHERE code = 'HOM-LAUN-15';
+UPDATE products SET image_url = '/assets/vendei/demo-products/paper-towels.jpg' WHERE code = 'HOM-PT-02';
+UPDATE products SET image_url = '/assets/vendei/demo-products/soap.jpg' WHERE code = 'HOM-SOAP-500';
+UPDATE products SET image_url = '/assets/vendei/demo-products/toothpaste.jpg' WHERE code = 'PC-TOOTH-120';
+UPDATE products SET image_url = '/assets/vendei/demo-products/shampoo.jpg' WHERE code = 'PC-SHAM-400';
+UPDATE products SET image_url = '/assets/vendei/demo-products/smartphone.jpg' WHERE code = 'EL-PHONE-DEMO';
+UPDATE products SET image_url = '/assets/vendei/demo-products/headphones.jpg' WHERE code = 'EL-HP-DEMO';
+UPDATE products SET image_url = '/assets/vendei/demo-products/water.jpg' WHERE code = 'SP-BOT-15';

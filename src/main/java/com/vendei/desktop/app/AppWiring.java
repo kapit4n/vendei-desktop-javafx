@@ -14,11 +14,13 @@ public final class AppWiring implements AutoCloseable {
     public final Connection conn;
     public final DSLContext dsl;
     public final CatalogService catalogService;
+    public final TicketService ticketService;
 
-    private AppWiring(Connection conn, DSLContext dsl, CatalogService catalogService) {
+    private AppWiring(Connection conn, DSLContext dsl, CatalogService catalogService, TicketService ticketService) {
         this.conn = conn;
         this.dsl = dsl;
         this.catalogService = catalogService;
+        this.ticketService = ticketService;
     }
 
     public static AppWiring buildDefault() throws SQLException, IOException {
@@ -29,7 +31,8 @@ public final class AppWiring implements AutoCloseable {
         var dsl = Db.jooq(conn);
         var products = new ProductRepository(dsl);
         var catalog = new CatalogService(products);
-        return new AppWiring(conn, dsl, catalog);
+        var ticket = new TicketService();
+        return new AppWiring(conn, dsl, catalog, ticket);
     }
 
     @Override

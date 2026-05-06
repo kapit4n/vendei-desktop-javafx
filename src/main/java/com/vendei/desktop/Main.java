@@ -12,7 +12,7 @@ public final class Main extends Application {
     @Override
     public void start(Stage stage) throws Exception {
         wiring = AppWiring.buildDefault();
-        var root = new MainView(wiring.catalogService);
+        var root = new MainView(wiring.catalogService, wiring.ticketService);
         var scene = new Scene(root, 1100, 700);
         stage.setTitle("Vendei POS (JavaFX)");
         stage.setScene(scene);
