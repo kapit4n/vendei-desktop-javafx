@@ -1,6 +1,7 @@
 package com.vendei.desktop.ui;
 
 import com.vendei.desktop.app.CatalogService;
+import com.vendei.desktop.app.CustomerService;
 import com.vendei.desktop.app.TicketService;
 import com.vendei.desktop.domain.PaymentMethod;
 import com.vendei.desktop.domain.Product;
@@ -35,14 +36,17 @@ import javafx.scene.image.ImageView;
 
 public final class MainView extends BorderPane {
     private final CatalogService catalog;
+    private final CustomerService customers;
     private final TicketService ticket;
     private final TilePane productGrid = new TilePane(12, 12);
     private final ScrollPane productScroll = new ScrollPane(productGrid);
     private final ListView<TicketLine> ticketLines = new ListView<>();
     private final TextField search = new TextField();
+    private final Label productListCount = new Label();
 
-    public MainView(CatalogService catalog, TicketService ticket) {
+    public MainView(CatalogService catalog, CustomerService customers, TicketService ticket) {
         this.catalog = catalog;
+        this.customers = customers;
         this.ticket = ticket;
 
         setBackground(new Background(new BackgroundFill(Color.web("#f6f7fb"), CornerRadii.EMPTY, Insets.EMPTY)));
@@ -60,7 +64,11 @@ public final class MainView extends BorderPane {
     }
 
     private void reload() {
-        var items = FXCollections.observableArrayList(catalog.listProducts(search.getText()));
+        var q = search.getText();
+        var items = FXCollections.observableArrayList(catalog.listProducts(q));
+        int shown = items.size();
+        int totalMatching = catalog.countProducts(q);
+        productListCount.setText(String.format("Showing %d of %d products", shown, totalMatching));
         renderProducts(items);
     }
 
@@ -116,8 +124,32 @@ public final class MainView extends BorderPane {
         productScroll.setStyle("-fx-background-color:transparent;");
         VBox.setVgrow(productScroll, Priority.ALWAYS);
 
-        wrap.getChildren().addAll(top, headerRow, cats, productScroll);
+        var listFrame = new VBox(10);
+        listFrame.setPadding(new Insets(12));
+        listFrame.setStyle(
+                "-fx-background-color: #fafafa; "
+                        + "-fx-background-radius: 12; "
+                        + "-fx-border-color: #e5e7eb; "
+                        + "-fx-border-radius: 12; "
+                        + "-fx-border-width: 1;"
+        );
+
+        var listTitleRow = new HBox(10);
+        listTitleRow.setAlignment(Pos.CENTER_LEFT);
+        var listTitle = new Label("PRODUCT LIST");
+        listTitle.setStyle("-fx-font-weight: 800; -fx-text-fill: #111827;");
+        var listTitleSpacer = new Region();
+        HBox.setHgrow(listTitleSpacer, Priority.ALWAYS);
+        var gridView = new Label("Grid ▾");
+        gridView.setStyle("-fx-text-fill: #6b7280;");
+        listTitleRow.getChildren().addAll(listTitle, listTitleSpacer, gridView);
+
+        productListCount.setStyle("-fx-text-fill: #6b7280;");
+        listFrame.getChildren().addAll(listTitleRow, productListCount, productScroll);
         VBox.setVgrow(productScroll, Priority.ALWAYS);
+
+        wrap.getChildren().addAll(top, headerRow, cats, listFrame);
+        VBox.setVgrow(listFrame, Priority.ALWAYS);
         return wrap;
     }
 
@@ -155,6 +187,12 @@ public final class MainView extends BorderPane {
         var selectClient = new Button("Select or create client");
         selectClient.setMaxWidth(Double.MAX_VALUE);
         selectClient.setStyle("-fx-background-radius: 10; -fx-background-color: #f3f4f6;");
+        selectClient.setOnAction(e -> ClientPickerDialog.show(customers).ifPresent(pick -> {
+            switch (pick) {
+                case ClientPickerDialog.Pick.Anonymous ignored -> ticket.clearCustomer();
+                case ClientPickerDialog.Pick.Selected s -> ticket.setCustomer(s.customer());
+            }
+        }));
         clientBox.getChildren().addAll(clientName, clientCi, selectClient);
 
         var paymentBox = section("PAYMENT");
@@ -204,7 +242,7 @@ public final class MainView extends BorderPane {
             alert.setHeaderText("Paid");
             alert.setContentText(String.format("Total: Bs %.2f (%s)", total, ticket.paymentMethodProperty().get()));
             alert.showAndWait();
-            ticket.clear();
+            ticket.resetForNextSale();
         });
 
         var totalRow = new HBox(8);
