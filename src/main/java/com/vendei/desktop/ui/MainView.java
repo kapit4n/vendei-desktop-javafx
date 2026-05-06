@@ -2,6 +2,7 @@ package com.vendei.desktop.ui;
 
 import com.vendei.desktop.app.CatalogService;
 import com.vendei.desktop.app.CustomerService;
+import com.vendei.desktop.app.SalesService;
 import com.vendei.desktop.app.TicketService;
 import com.vendei.desktop.domain.PaymentMethod;
 import com.vendei.desktop.domain.Product;
@@ -13,6 +14,7 @@ import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
@@ -34,9 +36,12 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.image.ImageView;
 
+import java.util.Locale;
+
 public final class MainView extends BorderPane {
     private final CatalogService catalog;
     private final CustomerService customers;
+    private final SalesService sales;
     private final TicketService ticket;
     private final TilePane productGrid = new TilePane(12, 12);
     private final ScrollPane productScroll = new ScrollPane(productGrid);
@@ -44,9 +49,10 @@ public final class MainView extends BorderPane {
     private final TextField search = new TextField();
     private final Label productListCount = new Label();
 
-    public MainView(CatalogService catalog, CustomerService customers, TicketService ticket) {
+    public MainView(CatalogService catalog, CustomerService customers, SalesService sales, TicketService ticket) {
         this.catalog = catalog;
         this.customers = customers;
+        this.sales = sales;
         this.ticket = ticket;
 
         setBackground(new Background(new BackgroundFill(Color.web("#f6f7fb"), CornerRadii.EMPTY, Insets.EMPTY)));
@@ -196,14 +202,36 @@ public final class MainView extends BorderPane {
         clientBox.getChildren().addAll(clientName, clientCi, selectClient);
 
         var paymentBox = section("PAYMENT");
+
+        var dueCard = new VBox(4);
+        dueCard.setPadding(new Insets(10, 10, 12, 10));
+        dueCard.setStyle(
+                "-fx-background-color: #ffffff; -fx-background-radius: 10; "
+                        + "-fx-border-color: #e5e7eb; -fx-border-radius: 10;"
+        );
+        var dueTitle = new Label("Amount due");
+        dueTitle.setStyle("-fx-text-fill: #6b7280; -fx-font-size: 11; -fx-font-weight: 700;");
+        var dueValue = new Label();
+        dueValue.textProperty().bind(ticket.subtotalProperty().asString("Bs %.2f"));
+        dueValue.setStyle("-fx-font-size: 26; -fx-font-weight: 800; -fx-text-fill: #111827;");
+        dueCard.getChildren().addAll(dueTitle, dueValue);
+
         var tg = new ToggleGroup();
         var cash = new ToggleButton("Cash");
-        var qr = new ToggleButton("QR");
+        var qr = new ToggleButton("QR / digital");
         cash.setToggleGroup(tg);
         qr.setToggleGroup(tg);
         cash.setSelected(true);
-        styleToggle(cash);
-        styleToggle(qr);
+        configurePayMethodToggle(cash);
+        configurePayMethodToggle(qr);
+        Runnable refreshPayToggleStyles = () -> {
+            applyPayToggleStyle(cash, cash.isSelected());
+            applyPayToggleStyle(qr, qr.isSelected());
+        };
+        cash.selectedProperty().addListener((o, a, s) -> refreshPayToggleStyles.run());
+        qr.selectedProperty().addListener((o, a, s) -> refreshPayToggleStyles.run());
+        refreshPayToggleStyles.run();
+
         tg.selectedToggleProperty().addListener((obs, oldV, newV) -> {
             if (newV == cash) ticket.paymentMethodProperty().set(PaymentMethod.CASH);
             if (newV == qr) ticket.paymentMethodProperty().set(PaymentMethod.QR);
@@ -213,50 +241,157 @@ public final class MainView extends BorderPane {
             if (newV == PaymentMethod.QR) qr.setSelected(true);
         });
 
-        var methodRow = new HBox(10, cash, qr);
+        var methodLabel = new Label("How is the customer paying?");
+        methodLabel.setStyle("-fx-text-fill: #6b7280; -fx-font-size: 11; -fx-font-weight: 700;");
+        var methodRow = new HBox(8, cash, qr);
+        methodRow.setAlignment(Pos.CENTER_LEFT);
 
-        var amountLabel = new Label("Amount (Bs)");
-        amountLabel.setStyle("-fx-text-fill: #6b7280;");
         var amount = new TextField();
         amount.setPromptText("0.00");
-        amount.textProperty().addListener((obs, o, n) -> {
-            ticket.amountReceivedProperty().set(parseMoney(n));
-        });
+        amount.textProperty().addListener((obs, o, n) -> ticket.amountReceivedProperty().set(parseMoney(n)));
 
-        var quickRow = new HBox(8,
-                quickAmount(5, amount),
-                quickAmount(10, amount),
-                quickAmount(20, amount),
-                quickAmount(50, amount),
-                quickAmount(100, amount),
-                quickAmount(200, amount)
+        var tenderLabel = new Label("Customer pays (cash)");
+        tenderLabel.setStyle("-fx-text-fill: #374151; -fx-font-weight: 700;");
+        var tenderHint = new Label("Enter cash received, tap a quick amount, or “Exact total”.");
+        tenderHint.setWrapText(true);
+        tenderHint.setStyle("-fx-text-fill: #6b7280; -fx-font-size: 11;");
+
+        var exact = new Button("Exact total");
+        exact.setMaxWidth(Double.MAX_VALUE);
+        exact.setFocusTraversable(false);
+        exact.setStyle("-fx-background-radius: 10; -fx-background-color: #e0e7ff; -fx-text-fill: #1e3a8a; -fx-font-weight: 600;");
+        exact.setOnAction(e -> amount.setText(String.format(Locale.US, "%.2f", ticket.subtotalProperty().get())));
+
+        var quickTile = new TilePane(8, 8);
+        quickTile.setPrefColumns(3);
+        for (var v : new int[] {5, 10, 20, 50, 100, 200}) {
+            quickTile.getChildren().add(quickAmount(v, amount));
+        }
+
+        var cashBlock = new VBox(8, tenderLabel, amount, exact, tenderHint, quickTile);
+
+        var qrHint = new Label(
+                "Customer pays the full amount due using a QR code "
+                        + "(wallet or banking app). No cash tender needed."
         );
+        qrHint.setWrapText(true);
+        qrHint.setStyle("-fx-text-fill: #374151; -fx-font-size: 12;");
+        var qrBlock = new VBox(8, qrHint);
 
-        var pay = new Button("Pay");
+        Runnable syncPayBlocks = () -> {
+            boolean isCash = ticket.paymentMethodProperty().get() == PaymentMethod.CASH;
+            cashBlock.setVisible(isCash);
+            cashBlock.setManaged(isCash);
+            qrBlock.setVisible(!isCash);
+            qrBlock.setManaged(!isCash);
+        };
+        ticket.paymentMethodProperty().addListener((o, a, b) -> syncPayBlocks.run());
+        ticket.paymentMethodProperty().addListener((o, oldM, newM) -> {
+            if (newM == PaymentMethod.QR) {
+                amount.clear();
+                ticket.amountReceivedProperty().set(0.0);
+            }
+        });
+        syncPayBlocks.run();
+
+        var status = new Label();
+        status.setWrapText(true);
+        status.textProperty().bind(Bindings.createStringBinding(() -> {
+            double total = ticket.subtotalProperty().get();
+            double tender = ticket.amountReceivedProperty().get();
+            if (ticket.paymentMethodProperty().get() == PaymentMethod.QR) {
+                return total <= 1e-9
+                        ? "Add items to the ticket first."
+                        : String.format("Ready: customer pays Bs %.2f by QR.", total);
+            }
+            if (total <= 1e-9) return "Add items to see the amount due.";
+            if (tender <= 1e-9) {
+                return String.format("Still due: Bs %.2f — enter cash received.", total);
+            }
+            if (tender + 1e-6 < total) {
+                return String.format("Still short: Bs %.2f more needed.", total - tender);
+            }
+            if (Math.abs(tender - total) < 1e-6) {
+                return "Exact cash — you can complete the sale.";
+            }
+            return String.format("Change to give back: Bs %.2f", tender - total);
+        },
+                ticket.subtotalProperty(),
+                ticket.amountReceivedProperty(),
+                ticket.paymentMethodProperty(),
+                ticket.lines()));
+
+        status.styleProperty().bind(Bindings.createStringBinding(() -> {
+            if (ticket.paymentMethodProperty().get() == PaymentMethod.QR) {
+                return "-fx-text-fill: #1d4ed8; -fx-font-weight: 600;";
+            }
+            double total = ticket.subtotalProperty().get();
+            double tender = ticket.amountReceivedProperty().get();
+            if (total <= 1e-9) return "-fx-text-fill: #6b7280;";
+            if (tender + 1e-6 < total) return "-fx-text-fill: #b45309; -fx-font-weight: 600;";
+            return "-fx-text-fill: #15803d; -fx-font-weight: 600;";
+        }, ticket.paymentMethodProperty(), ticket.subtotalProperty(), ticket.amountReceivedProperty()));
+
+        var pay = new Button("Complete sale");
         pay.setMaxWidth(Double.MAX_VALUE);
-        pay.setStyle("-fx-background-radius: 12; -fx-background-color: #2563eb; -fx-text-fill: white; -fx-font-weight: 700;");
-        pay.disableProperty().bind(Bindings.isEmpty(ticket.lines()));
+        pay.setStyle(
+                "-fx-background-radius: 12; -fx-background-color: #2563eb; -fx-text-fill: white; "
+                        + "-fx-font-weight: 700; -fx-padding: 12 16 12 16; -fx-font-size: 14;"
+        );
+        pay.disableProperty().bind(Bindings.createBooleanBinding(() -> {
+                    if (ticket.lines().isEmpty()) return true;
+                    if (ticket.paymentMethodProperty().get() == PaymentMethod.QR) return false;
+                    double total = ticket.subtotalProperty().get();
+                    double tender = ticket.amountReceivedProperty().get();
+                    return tender + 1e-6 < total;
+                },
+                ticket.lines(),
+                ticket.subtotalProperty(),
+                ticket.amountReceivedProperty(),
+                ticket.paymentMethodProperty()));
+
         pay.setOnAction(e -> {
+            var method = ticket.paymentMethodProperty().get();
             var total = ticket.subtotalProperty().get();
-            var alert = new Alert(Alert.AlertType.INFORMATION);
-            alert.setHeaderText("Paid");
-            alert.setContentText(String.format("Total: Bs %.2f (%s)", total, ticket.paymentMethodProperty().get()));
-            alert.showAndWait();
-            ticket.resetForNextSale();
+            var tender = ticket.amountReceivedProperty().get();
+            var confirm = new Alert(Alert.AlertType.CONFIRMATION);
+            confirm.setTitle("Confirm payment");
+            confirm.setHeaderText(String.format(Locale.US, "Charge Bs %.2f?", total));
+            var body = new StringBuilder();
+            if (method == PaymentMethod.CASH) {
+                body.append(String.format(Locale.US, "Cash tendered: Bs %.2f%n", tender));
+                if (tender > total + 1e-6) {
+                    body.append(String.format(Locale.US, "Change to return: Bs %.2f%n", tender - total));
+                }
+            } else {
+                body.append("Payment method: QR / digital (full amount).\n");
+            }
+            body.append("\nComplete this sale and clear the ticket?");
+            confirm.setContentText(body.toString());
+            confirm.showAndWait().filter(r -> r == ButtonType.OK).ifPresent(r -> {
+                try {
+                    sales.recordCompletedSale(ticket);
+                } catch (Exception ex) {
+                    var err = new Alert(Alert.AlertType.ERROR);
+                    err.setTitle("Sale not saved");
+                    err.setHeaderText("Could not record the sale in the database");
+                    err.setContentText(ex.getMessage() != null ? ex.getMessage() : ex.toString());
+                    err.showAndWait();
+                    return;
+                }
+                ticket.resetForNextSale();
+            });
         });
 
-        var totalRow = new HBox(8);
-        totalRow.setAlignment(Pos.CENTER_LEFT);
-        var totalLabel = new Label("Total");
-        totalLabel.setStyle("-fx-text-fill: #6b7280; -fx-font-weight: 700;");
-        var totalSpacer = new Region();
-        HBox.setHgrow(totalSpacer, Priority.ALWAYS);
-        var totalValue = new Label();
-        totalValue.textProperty().bind(ticket.subtotalProperty().asString("Bs %.2f"));
-        totalValue.setStyle("-fx-font-weight: 800;");
-        totalRow.getChildren().addAll(totalLabel, totalSpacer, totalValue);
-
-        paymentBox.getChildren().addAll(methodRow, amountLabel, amount, pay, quickRow, totalRow);
+        paymentBox.getChildren().addAll(
+                dueCard,
+                methodLabel,
+                methodRow,
+                cashBlock,
+                qrBlock,
+                status,
+                pay
+        );
 
         wrap.getChildren().addAll(header, ticketLines, clientBox, paymentBox);
         VBox.setVgrow(ticketLines, Priority.ALWAYS);
@@ -284,18 +419,36 @@ public final class MainView extends BorderPane {
         return b;
     }
 
-    private static void styleToggle(ToggleButton b) {
+    private static void configurePayMethodToggle(ToggleButton b) {
         b.setFocusTraversable(false);
         b.setMaxWidth(Double.MAX_VALUE);
         HBox.setHgrow(b, Priority.ALWAYS);
-        b.setStyle("-fx-background-radius: 10; -fx-background-color: #f3f4f6;");
+    }
+
+    private static void applyPayToggleStyle(ToggleButton b, boolean selected) {
+        if (selected) {
+            b.setStyle(
+                    "-fx-background-radius: 10; -fx-background-color: #2563eb; -fx-text-fill: white; "
+                            + "-fx-font-weight: 700;"
+            );
+        } else {
+            b.setStyle(
+                    "-fx-background-radius: 10; -fx-background-color: #e5e7eb; -fx-text-fill: #374151; "
+                            + "-fx-font-weight: 600;"
+            );
+        }
     }
 
     private Button quickAmount(int v, TextField amount) {
         var b = new Button(v + " Bs");
         b.setFocusTraversable(false);
-        b.setStyle("-fx-background-radius: 10; -fx-background-color: #f3f4f6;");
-        b.setOnAction(e -> amount.setText(Integer.toString(v)));
+        b.setMaxWidth(Double.MAX_VALUE);
+        b.setStyle("-fx-background-radius: 10; -fx-background-color: #f3f4f6; -fx-font-weight: 600;");
+        b.setOnAction(e -> {
+            var cur = parseMoney(amount.getText());
+            var sum = cur + v;
+            amount.setText(String.format(Locale.US, "%.2f", sum));
+        });
         return b;
     }
 

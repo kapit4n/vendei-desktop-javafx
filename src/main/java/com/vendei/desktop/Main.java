@@ -3,6 +3,7 @@ package com.vendei.desktop;
 import com.vendei.desktop.app.AppWiring;
 import com.vendei.desktop.ui.MainView;
 import com.vendei.desktop.ui.ClientsView;
+import com.vendei.desktop.ui.ProductSalesReportView;
 import com.vendei.desktop.ui.RegisteredProductsView;
 import javafx.application.Application;
 import javafx.scene.Scene;
@@ -18,7 +19,12 @@ public final class Main extends Application {
     @Override
     public void start(Stage stage) throws Exception {
         wiring = AppWiring.buildDefault();
-        var pos = new MainView(wiring.catalogService, wiring.customerService, wiring.ticketService);
+        var pos = new MainView(
+                wiring.catalogService,
+                wiring.customerService,
+                wiring.salesService,
+                wiring.ticketService
+        );
 
         var catalogMenu = new Menu("Catalog");
         var allRegistered = new MenuItem("All registered products…");
@@ -30,7 +36,12 @@ public final class Main extends Application {
         allClients.setOnAction(e -> openClientsWindow());
         clientsMenu.getItems().add(allClients);
 
-        var menuBar = new MenuBar(catalogMenu, clientsMenu);
+        var reportsMenu = new Menu("Reports");
+        var productSales = new MenuItem("Product sales…");
+        productSales.setOnAction(e -> openProductSalesReportWindow());
+        reportsMenu.getItems().add(productSales);
+
+        var menuBar = new MenuBar(catalogMenu, clientsMenu, reportsMenu);
 
         var shell = new BorderPane();
         shell.setTop(menuBar);
@@ -57,6 +68,15 @@ public final class Main extends Application {
         w.setMinWidth(560);
         w.setMinHeight(400);
         w.setScene(new Scene(new ClientsView(wiring.customerService), 720, 480));
+        w.show();
+    }
+
+    private void openProductSalesReportWindow() {
+        var w = new Stage();
+        w.setTitle("Product sales report");
+        w.setMinWidth(560);
+        w.setMinHeight(400);
+        w.setScene(new Scene(new ProductSalesReportView(wiring.salesService), 720, 520));
         w.show();
     }
 

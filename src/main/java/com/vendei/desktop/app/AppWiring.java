@@ -2,6 +2,7 @@ package com.vendei.desktop.app;
 
 import com.vendei.desktop.infra.catalog.ProductRepository;
 import com.vendei.desktop.infra.customers.CustomerRepository;
+import com.vendei.desktop.infra.sales.SalesRepository;
 import com.vendei.desktop.infra.db.Db;
 import com.vendei.desktop.infra.db.DbConfig;
 import org.jooq.DSLContext;
@@ -17,6 +18,7 @@ public final class AppWiring implements AutoCloseable {
     public final CatalogService catalogService;
     public final InventoryService inventoryService;
     public final CustomerService customerService;
+    public final SalesService salesService;
     public final TicketService ticketService;
 
     private AppWiring(
@@ -25,6 +27,7 @@ public final class AppWiring implements AutoCloseable {
             CatalogService catalogService,
             InventoryService inventoryService,
             CustomerService customerService,
+            SalesService salesService,
             TicketService ticketService
     ) {
         this.conn = conn;
@@ -32,6 +35,7 @@ public final class AppWiring implements AutoCloseable {
         this.catalogService = catalogService;
         this.inventoryService = inventoryService;
         this.customerService = customerService;
+        this.salesService = salesService;
         this.ticketService = ticketService;
     }
 
@@ -46,8 +50,10 @@ public final class AppWiring implements AutoCloseable {
         var inventory = new InventoryService(dsl);
         var customers = new CustomerRepository(dsl);
         var customerService = new CustomerService(customers);
+        var salesRepo = new SalesRepository(dsl);
+        var salesService = new SalesService(salesRepo);
         var ticket = new TicketService();
-        return new AppWiring(conn, dsl, catalog, inventory, customerService, ticket);
+        return new AppWiring(conn, dsl, catalog, inventory, customerService, salesService, ticket);
     }
 
     @Override
