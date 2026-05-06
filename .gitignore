@@ -1,0 +1,36 @@
+# --- Gradle ---
+.gradle/
+build/
+**/build/
+
+# --- Java ---
+*.class
+*.jar
+*.war
+*.ear
+hs_err_pid*
+replay_pid*
+
+# --- Java tooling ---
+.classpath
+.project
+.settings/
+
+# --- IntelliJ IDEA / Android Studio ---
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# --- VS Code / Cursor ---
+.vscode/
+.cursor/
+
+# --- OS / misc ---
+.DS_Store
+Thumbs.db
+
+# --- App runtime data (SQLite) ---
+data/
+
