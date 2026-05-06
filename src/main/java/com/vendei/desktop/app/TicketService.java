@@ -105,7 +105,11 @@ public final class TicketService {
             }
         }
 
-        lines.add(new TicketLine(p.id(), p.name(), p.code(), p.price(), qty));
+        lines.add(new TicketLine(p.id(), p.name(), p.code(), p.price(), qty, saleUnitLabel(p)));
+    }
+
+    private static String saleUnitLabel(Product p) {
+        return p.saleUnitDisplay();
     }
 
     public void setQuantity(long productId, double qty) {

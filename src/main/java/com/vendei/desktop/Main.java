@@ -4,7 +4,9 @@ import com.vendei.desktop.app.AppWiring;
 import com.vendei.desktop.ui.MainView;
 import com.vendei.desktop.ui.ClientsView;
 import com.vendei.desktop.ui.ProductSalesReportView;
+import com.vendei.desktop.ui.RegisterProductView;
 import com.vendei.desktop.ui.RegisteredProductsView;
+import com.vendei.desktop.ui.UnitsManagementView;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.control.Menu;
@@ -29,7 +31,11 @@ public final class Main extends Application {
         var catalogMenu = new Menu("Catalog");
         var allRegistered = new MenuItem("All registered products…");
         allRegistered.setOnAction(e -> openRegisteredProductsWindow());
-        catalogMenu.getItems().add(allRegistered);
+        var registerProduct = new MenuItem("Register product…");
+        registerProduct.setOnAction(e -> openRegisterProductWindow(null));
+        var units = new MenuItem("Units of measure…");
+        units.setOnAction(e -> openUnitsWindow());
+        catalogMenu.getItems().addAll(allRegistered, registerProduct, units);
 
         var clientsMenu = new Menu("Clients");
         var allClients = new MenuItem("All clients…");
@@ -58,7 +64,25 @@ public final class Main extends Application {
         w.setTitle("Registered products");
         w.setMinWidth(720);
         w.setMinHeight(480);
-        w.setScene(new Scene(new RegisteredProductsView(wiring.catalogService, wiring.inventoryService), 960, 560));
+        w.setScene(new Scene(new RegisteredProductsView(wiring.catalogService, wiring.inventoryService, this::openRegisterProductWindow, this::openUnitsWindow), 960, 560));
+        w.show();
+    }
+
+    private void openRegisterProductWindow(Runnable afterSave) {
+        var w = new Stage();
+        w.setTitle("Register product");
+        w.setMinWidth(440);
+        w.setMinHeight(420);
+        w.setScene(new Scene(new RegisterProductView(wiring.catalogService, afterSave), 520, 460));
+        w.show();
+    }
+
+    private void openUnitsWindow() {
+        var w = new Stage();
+        w.setTitle("Units of measure");
+        w.setMinWidth(520);
+        w.setMinHeight(400);
+        w.setScene(new Scene(new UnitsManagementView(wiring.catalogService), 640, 480));
         w.show();
     }
 

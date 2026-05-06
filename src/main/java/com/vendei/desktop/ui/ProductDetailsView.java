@@ -99,10 +99,20 @@ public final class ProductDetailsView extends BorderPane {
             return;
         }
         title.setText(p.name());
+        var brand = p.brand() == null || p.brand().isBlank() ? "—" : p.brand();
+        var unit = p.unitSummary();
+        if (unit.isBlank()) unit = "—";
+        double margin = p.price() - p.cost();
         meta.setText(String.format(
-                "Code: %s  ·  Price: Bs %.2f  ·  Current stock: %s  ·  Visible: %s",
+                "Code: %s  ·  Brand: %s  ·  Sell unit: %s%n"
+                        + "Cost: Bs %.2f  ·  Price: Bs %.2f  ·  Margin / unit: Bs %.2f%n"
+                        + "Stock (in sell unit): %s  ·  Visible: %s",
                 p.code() != null ? p.code() : "—",
+                brand,
+                unit,
+                p.cost(),
                 p.price(),
+                margin,
                 formatQty(p.stock()),
                 p.visible() ? "yes" : "no"
         ));

@@ -7,12 +7,14 @@ public record TicketLine(
         String name,
         String code,
         double unitPrice,
-        double quantity
+        double quantity,
+        String unitOfMeasure
 ) {
     public TicketLine {
         Objects.requireNonNull(name);
         if (quantity <= 0) throw new IllegalArgumentException("quantity must be > 0");
         if (unitPrice < 0) throw new IllegalArgumentException("unitPrice must be >= 0");
+        unitOfMeasure = unitOfMeasure == null ? "" : unitOfMeasure;
     }
 
     public double lineTotal() {
@@ -20,7 +22,7 @@ public record TicketLine(
     }
 
     public TicketLine withQuantity(double newQuantity) {
-        return new TicketLine(productId, name, code, unitPrice, newQuantity);
+        return new TicketLine(productId, name, code, unitPrice, newQuantity, unitOfMeasure);
     }
 }
 

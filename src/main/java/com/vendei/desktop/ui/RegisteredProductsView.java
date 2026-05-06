@@ -22,6 +22,7 @@ import javafx.stage.Stage;
 
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 /**
  * Table of every product row in the database (including hidden SKUs).
@@ -29,26 +30,39 @@ import java.util.Optional;
 public final class RegisteredProductsView extends BorderPane {
     private final CatalogService catalog;
     private final InventoryService inventory;
+    private final Consumer<Runnable> openRegisterProduct;
+    private final Runnable openUnitsWindow;
     private final TableView<ProductRow> table = new TableView<>();
     private final TextField search = new TextField();
     private final Label countLabel = new Label();
 
-    public RegisteredProductsView(CatalogService catalog, InventoryService inventory) {
+    public RegisteredProductsView(
+            CatalogService catalog,
+            InventoryService inventory,
+            Consumer<Runnable> openRegisterProduct,
+            Runnable openUnitsWindow
+    ) {
         this.catalog = Objects.requireNonNull(catalog);
         this.inventory = Objects.requireNonNull(inventory);
+        this.openRegisterProduct = Objects.requireNonNull(openRegisterProduct);
+        this.openUnitsWindow = Objects.requireNonNull(openUnitsWindow);
 
         var top = new HBox(10);
         top.setPadding(new Insets(12));
         top.setAlignment(Pos.CENTER_LEFT);
-        search.setPromptText("Filter by name or code…");
+        search.setPromptText("Filter by name, code, or brand…");
         HBox.setHgrow(search, Priority.ALWAYS);
         var refresh = new Button("Refresh");
         refresh.setOnAction(e -> reload());
+        var register = new Button("Register product…");
+        register.setOnAction(e -> openRegisterProduct.accept(this::reload));
+        var units = new Button("Units of measure…");
+        units.setOnAction(e -> openUnitsWindow.run());
         var addStock = new Button("Add stock…");
         addStock.setOnAction(e -> selectedRow().ifPresent(this::addStockForRow));
         var details = new Button("Product details…");
         details.setOnAction(e -> selectedRow().ifPresent(this::openDetails));
-        top.getChildren().addAll(new Label("Search:"), search, refresh, addStock, details, countLabel);
+        top.getChildren().addAll(new Label("Search:"), search, refresh, register, units, addStock, details, countLabel);
         setTop(top);
 
         var colId = new TableColumn<ProductRow, Long>("ID");
@@ -62,6 +76,18 @@ public final class RegisteredProductsView extends BorderPane {
         var colCode = new TableColumn<ProductRow, String>("Code");
         colCode.setCellValueFactory(c -> new ReadOnlyObjectWrapper<>(c.getValue().getCode()));
         colCode.setPrefWidth(120);
+
+        var colBrand = new TableColumn<ProductRow, String>("Brand");
+        colBrand.setCellValueFactory(c -> new ReadOnlyObjectWrapper<>(c.getValue().getBrand()));
+        colBrand.setPrefWidth(100);
+
+        var colUnit = new TableColumn<ProductRow, String>("Unit");
+        colUnit.setCellValueFactory(c -> new ReadOnlyObjectWrapper<>(c.getValue().getUnit()));
+        colUnit.setPrefWidth(88);
+
+        var colCost = new TableColumn<ProductRow, String>("Cost");
+        colCost.setCellValueFactory(c -> new ReadOnlyObjectWrapper<>(c.getValue().getCostText()));
+        colCost.setPrefWidth(72);
 
         var colPrice = new TableColumn<ProductRow, String>("Price");
         colPrice.setCellValueFactory(c -> new ReadOnlyObjectWrapper<>(c.getValue().getPriceText()));
@@ -79,7 +105,7 @@ public final class RegisteredProductsView extends BorderPane {
         colImage.setCellValueFactory(c -> new ReadOnlyObjectWrapper<>(c.getValue().getImageShort()));
         colImage.setPrefWidth(160);
 
-        table.getColumns().addAll(colId, colName, colCode, colPrice, colStock, colVisible, colImage);
+        table.getColumns().addAll(colId, colName, colCode, colBrand, colUnit, colCost, colPrice, colStock, colVisible, colImage);
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
         table.setOnMouseClicked(e -> {
             if (e.getButton() == MouseButton.PRIMARY
@@ -137,6 +163,9 @@ public final class RegisteredProductsView extends BorderPane {
         private long id;
         private String name;
         private String code;
+        private String brand;
+        private String unit;
+        private String costText;
         private String priceText;
         private String stockText;
         private String visibleText;
@@ -147,6 +176,10 @@ public final class RegisteredProductsView extends BorderPane {
             r.id = p.id();
             r.name = p.name() != null ? p.name() : "";
             r.code = p.code() != null ? p.code() : "";
+            r.brand = p.brand() != null && !p.brand().isBlank() ? p.brand() : "—";
+            var u = p.unitSummary();
+            r.unit = u.isBlank() ? "—" : u;
+            r.costText = String.format("Bs %.2f", p.cost());
             r.priceText = String.format("Bs %.2f", p.price());
             r.stockText = formatStock(p.stock());
             r.visibleText = p.visible() ? "Yes" : "No";
@@ -175,6 +208,18 @@ public final class RegisteredProductsView extends BorderPane {
 
         public String getCode() {
             return code;
+        }
+
+        public String getBrand() {
+            return brand;
+        }
+
+        public String getUnit() {
+            return unit;
+        }
+
+        public String getCostText() {
+            return costText;
         }
 
         public String getPriceText() {

@@ -37,6 +37,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.image.ImageView;
 
 import java.util.Locale;
+import java.util.StringJoiner;
 
 public final class MainView extends BorderPane {
     private final CatalogService catalog;
@@ -498,8 +499,11 @@ public final class MainView extends BorderPane {
         var name = new Label(p.name());
         name.setStyle("-fx-text-fill: #374151;");
         name.setWrapText(true);
+        var detail = new Label(productCardSubtitle(p));
+        detail.setWrapText(true);
+        detail.setStyle("-fx-font-size: 11; -fx-text-fill: #6b7280;");
 
-        card.getChildren().addAll(img, price, name);
+        card.getChildren().addAll(img, price, name, detail);
         card.setOnMouseClicked(e -> ticket.addProduct(p));
         return card;
     }
@@ -513,6 +517,16 @@ public final class MainView extends BorderPane {
                 return;
             }
         }
+    }
+
+    private static String productCardSubtitle(Product p) {
+        var j = new StringJoiner(" · ");
+        if (p.brand() != null && !p.brand().isBlank()) j.add(p.brand());
+        var u = p.unitSummary();
+        if (!u.isBlank()) j.add(u);
+        if (p.cost() > 1e-9) j.add(String.format(Locale.US, "cost Bs %.2f", p.cost()));
+        var s = j.toString();
+        return s.isEmpty() ? "\u00a0" : s;
     }
 
     private static double parseMoney(String s) {
@@ -550,7 +564,13 @@ public final class MainView extends BorderPane {
             var left = new VBox(2);
             var name = new Label(item.name());
             name.setStyle("-fx-font-weight: 800;");
-            var meta = new Label(String.format("Bs %.2f  ×  %s", item.unitPrice(), trim(item.quantity())));
+            var unit = item.unitOfMeasure().isBlank() ? "" : " " + item.unitOfMeasure();
+            var meta = new Label(String.format(
+                    "Bs %.2f  ×  %s%s",
+                    item.unitPrice(),
+                    trim(item.quantity()),
+                    unit
+            ));
             meta.setStyle("-fx-text-fill: #6b7280;");
             left.getChildren().addAll(name, meta);
 

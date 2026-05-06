@@ -1,6 +1,7 @@
 package com.vendei.desktop.app;
 
 import com.vendei.desktop.infra.catalog.ProductRepository;
+import com.vendei.desktop.infra.catalog.UnitOfMeasureRepository;
 import com.vendei.desktop.infra.customers.CustomerRepository;
 import com.vendei.desktop.infra.sales.SalesRepository;
 import com.vendei.desktop.infra.db.Db;
@@ -45,8 +46,9 @@ public final class AppWiring implements AutoCloseable {
         Db.migrate(cfg);
         var conn = Db.connect(cfg);
         var dsl = Db.jooq(conn);
+        var units = new UnitOfMeasureRepository(dsl);
         var products = new ProductRepository(dsl);
-        var catalog = new CatalogService(products);
+        var catalog = new CatalogService(products, units);
         var inventory = new InventoryService(dsl);
         var customers = new CustomerRepository(dsl);
         var customerService = new CustomerService(customers);
